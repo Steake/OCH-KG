@@ -43,8 +43,19 @@ export function addMsg(role, html, extraClass) {
       });
     });
     toolbar.querySelector('[data-action="regen"]').addEventListener('click', () => {
-      // Find the last user message before this assistant message
-      if (window._regenerateLastChat) window._regenerateLastChat();
+      const btn = toolbar.querySelector('[data-action="regen"]');
+      if (!btn || btn.disabled) return;
+      const prev = btn.textContent;
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.textContent = '⟳…';
+      Promise.resolve(window._regenerateLastChat?.())
+        .catch(() => {})
+        .finally(() => {
+          btn.classList.remove('loading');
+          btn.disabled = false;
+          btn.textContent = prev;
+        });
     });
     div.appendChild(toolbar);
   }

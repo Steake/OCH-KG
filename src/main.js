@@ -486,16 +486,29 @@ const chatCtx = () => ({
   moveLinkTipFn: _moveLinkTipFn,
 });
 
+let _chatRequestInFlight = false;
+function _setChatBusyUI(isBusy) {
+  const sendBtn = document.getElementById('chatSend');
+  const input = document.getElementById('chatInput');
+  if (sendBtn) sendBtn.disabled = isBusy;
+  if (input) input.disabled = isBusy;
+  document.querySelectorAll('.ch-msg-btn[data-action="regen"]').forEach(btn => {
+    btn.disabled = isBusy;
+  });
+}
+
 window.sendChat = async function(queryOverride) {
   const input  = document.getElementById('chatInput');
   const query  = queryOverride || input.value.trim(); if (!query) return;
-  const busyEl = document.getElementById('chatSend');
-  busyEl.disabled = true; if (!queryOverride) input.value = '';
+  if (_chatRequestInFlight) return;
+  _chatRequestInFlight = true;
+  _setChatBusyUI(true);
+  if (!queryOverride) input.value = '';
   addMsg('user', query.replace(/</g,'&lt;'));
   const thinking = addMsg('thinking', '⟳ Thinking…');
   try {
     const result   = await callGraphLLM(query, chatHistory, OLI, CITED, ARXIV, ZENODO_KW, chatMode);
-    thinking.remove();
+    if (thinking?.isConnected) thinking.remove();
 
     let highlightIds = [];
     let tagHtml = '';
@@ -530,20 +543,22 @@ window.sendChat = async function(queryOverride) {
     chatHistory.push({role:'user',content:query});
     chatHistory.push({role:'assistant',content:result.narrative||''});
   } catch(err) {
-    thinking.remove();
+    if (thinking?.isConnected) thinking.remove();
     addMsg('error', `⚠ ${(err.message||'AI error').replace(/</g,'&lt;')}`);
+  } finally {
+    _chatRequestInFlight = false;
+    _setChatBusyUI(false);
+    document.getElementById('chatInput').focus();
   }
-  busyEl.disabled = false;
-  document.getElementById('chatInput').focus();
 };
 
 // Regenerate: re-send the last user query
-window._regenerateLastChat = function() {
+window._regenerateLastChat = async function() {
+  if (_chatRequestInFlight) return;
   // Find the last user message in history
   for (let i = chatHistory.length - 1; i >= 0; i--) {
     if (chatHistory[i].role === 'user') {
-      window.sendChat(chatHistory[i].content);
-      return;
+      return window.sendChat(chatHistory[i].content);
     }
   }
 };
