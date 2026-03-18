@@ -544,13 +544,21 @@ document.getElementById('chatInput').addEventListener('keydown', e => {
 // ── Mobile: resize chat panel when virtual keyboard opens ──────────────────
 if (window.visualViewport) {
   const _chatPanel = document.getElementById('chatPanel');
+  const _chatInput = document.getElementById('chatInput');
   window.visualViewport.addEventListener('resize', () => {
     if (chatPanelOpen && _isMobile()) {
       const vvH = window.visualViewport.height;
-      _chatPanel.style.height = `${Math.min(vvH - 48, window.innerHeight * 0.85)}px`;
+      const keyboardLikelyOpen = vvH < (window.innerHeight - 80);
+      const inputFocused = document.activeElement === _chatInput;
+      if (keyboardLikelyOpen && inputFocused) {
+        const nextH = Math.max(320, Math.min(vvH - 48, window.innerHeight * 0.85));
+        _chatPanel.style.height = `${nextH}px`;
+      } else {
+        _chatPanel.style.height = '';
+      }
     }
   });
-  document.getElementById('chatInput').addEventListener('blur', () => {
+  _chatInput.addEventListener('blur', () => {
     _chatPanel.style.height = '';
   });
 }
