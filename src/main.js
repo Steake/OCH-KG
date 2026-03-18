@@ -420,6 +420,9 @@ function closeChatPanel() {
   chatPanelOpen = false;
   if (_isMobile() && bsChat) bsChat.close();
   else document.getElementById('chatPanel').classList.remove('open');
+  const chatEl = document.getElementById('chatPanel');
+  chatEl.style.height = '';
+  chatEl.style.bottom = '';
   document.getElementById('chatToggle').classList.remove('active');
 }
 
@@ -545,21 +548,28 @@ document.getElementById('chatInput').addEventListener('keydown', e => {
 if (window.visualViewport) {
   const _chatPanel = document.getElementById('chatPanel');
   const _chatInput = document.getElementById('chatInput');
-  window.visualViewport.addEventListener('resize', () => {
+  const _syncChatViewport = () => {
     if (chatPanelOpen && _isMobile()) {
-      const vvH = window.visualViewport.height;
+      const vv = window.visualViewport;
+      const vvH = vv.height;
       const keyboardLikelyOpen = vvH < (window.innerHeight - 80);
       const inputFocused = document.activeElement === _chatInput;
       if (keyboardLikelyOpen && inputFocused) {
+        const keyboardInset = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
         const nextH = Math.max(320, Math.min(vvH - 48, window.innerHeight * 0.85));
         _chatPanel.style.height = `${nextH}px`;
+        _chatPanel.style.bottom = `${keyboardInset}px`;
       } else {
         _chatPanel.style.height = '';
+        _chatPanel.style.bottom = '';
       }
     }
-  });
+  };
+  window.visualViewport.addEventListener('resize', _syncChatViewport);
+  window.visualViewport.addEventListener('scroll', _syncChatViewport);
   _chatInput.addEventListener('blur', () => {
     _chatPanel.style.height = '';
+    _chatPanel.style.bottom = '';
   });
 }
 
