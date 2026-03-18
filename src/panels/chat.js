@@ -21,6 +21,9 @@ export function toggleChat() {
 
 export function addMsg(role, html, extraClass) {
   const msgs = document.getElementById('chatMessages');
+  const stickToBottom = msgs
+    ? (msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight) <= 28
+    : true;
   const div  = document.createElement('div');
   div.className = `chat-msg ${role}${extraClass?' '+extraClass:''}`;
   div.innerHTML  = html;
@@ -61,7 +64,7 @@ export function addMsg(role, html, extraClass) {
   }
 
   msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  if (stickToBottom) msgs.scrollTop = msgs.scrollHeight;
   return div;
 }
 

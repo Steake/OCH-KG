@@ -451,6 +451,7 @@ body.theme-light .ch-hoverable.ch-active {
   max-height: 88px;
   overflow-y: auto;
   font-style: normal;
+  white-space: pre-wrap;
 }
 .chat-msg.thinking .ch-stream-cot {
   margin-top: 7px;
@@ -470,6 +471,7 @@ body.theme-light .ch-hoverable.ch-active {
   border: 1px solid rgba(255,255,255,0.05);
   border-radius: 6px;
   padding: 6px;
+  white-space: pre-wrap;
 }
 .chat-msg.error {
   align-self: flex-start; color: #e06060;

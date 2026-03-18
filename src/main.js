@@ -489,16 +489,63 @@ const chatCtx = () => ({
 let _chatRequestInFlight = false;
 const _esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
+function _isNearBottom(el, slack = 24) {
+  if (!el) return false;
+  return (el.scrollHeight - el.scrollTop - el.clientHeight) <= slack;
+}
+
+function _scrollToBottom(el) {
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
+}
+
 function _renderThinkingBubble(el, textAgg, cotAgg, mode) {
   if (!el || !el.isConnected) return;
+
+  const chatMsgs = document.getElementById('chatMessages');
+  const stickChat = _isNearBottom(chatMsgs, 36);
+
+  let titleEl = el.querySelector('.ch-stream-title');
+  if (!titleEl) {
+    titleEl = document.createElement('div');
+    titleEl.className = 'ch-stream-title';
+    el.innerHTML = '';
+    el.appendChild(titleEl);
+  }
+
+  let textEl = el.querySelector('.ch-stream-text');
+  if (!textEl) {
+    textEl = document.createElement('div');
+    textEl.className = 'ch-stream-text';
+    el.appendChild(textEl);
+  }
+
+  let cotWrap = el.querySelector('.ch-stream-cot');
+  if (!cotWrap) {
+    cotWrap = document.createElement('details');
+    cotWrap.className = 'ch-stream-cot';
+    cotWrap.open = true;
+    cotWrap.innerHTML = '<summary>CoT stream</summary><div></div>';
+    el.appendChild(cotWrap);
+  }
+  const cotBody = cotWrap.querySelector('div');
+
+  const stickText = _isNearBottom(textEl, 12);
+  const stickCoT = _isNearBottom(cotBody, 12);
+
   const hasText = !!(textAgg && textAgg.trim());
   const hasCoT = !!(cotAgg && cotAgg.trim());
-  const title = mode === 'graph' ? '⟳ Planning graph ops…' : '⟳ Generating…';
-  el.innerHTML = `
-    <div class="ch-stream-title">${title}</div>
-    ${hasText ? `<div class="ch-stream-text">${_esc(textAgg).replace(/\n/g,'<br>')}</div>` : ''}
-    ${hasCoT ? `<details class="ch-stream-cot" open><summary>CoT stream</summary><div>${_esc(cotAgg).replace(/\n/g,'<br>')}</div></details>` : ''}
-  `;
+  titleEl.textContent = mode === 'graph' ? '⟳ Planning graph ops…' : '⟳ Generating…';
+
+  textEl.style.display = hasText ? '' : 'none';
+  if (hasText) textEl.textContent = textAgg;
+
+  cotWrap.style.display = hasCoT ? '' : 'none';
+  if (hasCoT) cotBody.textContent = cotAgg;
+
+  if (hasText && stickText) _scrollToBottom(textEl);
+  if (hasCoT && stickCoT) _scrollToBottom(cotBody);
+  if (stickChat) _scrollToBottom(chatMsgs);
 }
 
 function _setChatBusyUI(isBusy) {
