@@ -199,9 +199,10 @@
   #rankingsPanel.open { left: 0; transform: translateY(0); }
   #chatPanel {
     right: 0; left: 0;
-    top: calc(var(--header-height) + var(--safe-top));
-    bottom: 0;
-    height: auto; max-height: none;
+    top: calc(var(--header-height) + var(--safe-top) + 8px);
+    bottom: auto;
+    height: min(78dvh, calc(100dvh - var(--header-height) - var(--safe-top) - 8px));
+    max-height: calc(100dvh - var(--header-height) - var(--safe-top) - 8px);
     width: 100%; border-radius: 20px 20px 0 0;
     transform: translateY(100%);
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
