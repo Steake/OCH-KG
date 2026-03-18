@@ -180,13 +180,22 @@ body.theme-light .header-brand { color: var(--text-primary); }
 
 .mobile-close { display: none; }
 
+/* ── HAMBURGER ── */
+#hamburger {
+  display: none;
+  background: none; border: none;
+  color: var(--text-primary); font-size: 22px; cursor: pointer;
+  padding: 6px; margin-left: -6px; margin-right: 8px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 639px) {
   #hamburger { display: block; }
   #header { height: 48px; }
   #controls { display: none; }
   #controls.open {
     display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--bg-surface); z-index: 500;
+    background: var(--bg-surface); z-index: 700;
     flex-direction: column; padding: var(--safe-top) var(--space-md) var(--safe-bottom);
     gap: var(--space-md); overflow-y: auto;
     align-items: flex-start; margin: 0;
@@ -430,15 +439,6 @@ body.theme-light #aiProgress {
     top: auto; bottom: 0; right: 0; left: 0;
     width: 100%; border-radius: 16px 16px 0 0;
   }
-}
-
-/* ── HAMBURGER ── */
-#hamburger {
-  display: none;
-  background: none; border: none;
-  color: #fff; font-size: 22px; cursor: pointer;
-  padding: 6px; margin-left: -6px; margin-right: 8px;
-  flex-shrink: 0;
 }
 
 /* ── COMMAND PALETTE (Cmd-K) ── */

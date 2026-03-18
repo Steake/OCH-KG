@@ -95,6 +95,13 @@ window.toggleMenu = function() {
   nav.classList.toggle('open');
 };
 
+// Auto-close mobile menu when any pill / button is tapped
+document.getElementById('controls').addEventListener('click', e => {
+  if (e.target.closest('.pill') && window.innerWidth <= 639) {
+    document.getElementById('controls').classList.remove('open');
+  }
+});
+
 // ── Legend Toggle ──────────────────────────────────────────────────────────
 window.toggleLegend = function() {
   document.getElementById('legend').classList.toggle('collapsed');
