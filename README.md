@@ -1,32 +1,34 @@
 # OCH·KG — Oliver C. Hirst Research Knowledge Graph
 
-Interactive knowledge graph for exploring Oliver C. Hirst’s research ecosystem, adjacent literature, and AI-inferred conceptual links.
+An interactive argument map of ideas: Oliver C. Hirst’s research core, surrounding literature, and machine-inferred conceptual bridges.
 
-Built as a fast, static, browser-first app with D3.js, modular ES modules, and mobile-optimized panel interactions.
+This is not a static bibliography dressed up as a graph. It is a live, inspectable system for asking better questions: What connects to what? Which claims carry structural weight? Where are the weak ties, the hidden paths, the conceptual fault lines?
+
+Built as a fast, static, browser-first app with D3.js, modular ES modules, and hard-earned mobile UX refinements.
 
 ---
 
 ## Highlights
 
-- **Interactive graph exploration**
-  - Zoom/pan/drag with D3 force simulation
-  - Hover tooltips for nodes and links
-  - Click-to-focus and detail inspection
-- **Research ranking views**
+- **Graph exploration with teeth**
+  - Zoom/pan/drag via D3 force simulation
+  - Hover tooltips for node/link semantics
+  - Click-to-focus and detail inspection without context loss
+- **Ranking views that matter**
   - Overall, EQBSL, PageRank, Degree, Betweenness, Closeness
-- **AI graph assistant (OpenRouter)**
-  - Natural language graph actions (highlight, path finding, focus, inferred edges)
-  - Free-model discovery via OpenRouter models API
-- **Dynamic graph enrichment**
+- **AI assistant that acts on the graph, not around it**
+  - Natural-language graph actions (highlight, path finding, focus, inferred edges)
+  - Free-model discovery from OpenRouter’s models API
+- **Live graph enrichment**
   - Add papers from DOI / arXiv / Zenodo input
-  - Fetch adjacent papers from Semantic Scholar
+  - Pull adjacent research from Semantic Scholar
 - **Command palette (`Cmd/Ctrl + K`)**
-  - Fast action/search interface
-- **Mobile-first panel UX**
-  - Bottom-sheet behavior
-  - Touch targets, drag handles, scroll lock, safe-area aware layout
+  - Action launcher + graph-aware search
+- **Mobile UX that behaves like it belongs in 2026**
+  - Bottom-sheet panels, drag handles, safe-area awareness
+  - scroll-lock, touch targets, and keyboard-aware chat behavior
 - **Theme support**
-  - Dark + light modes with persistent preference
+  - Dark + light modes with persisted preference
 
 ---
 
@@ -77,6 +79,8 @@ Important values:
 ### OpenRouter key
 
 Current implementation uses a client-side key constant in [src/config.js](src/config.js). If you rotate keys, update that value and redeploy.
+
+If you are deploying publicly, treat key exposure as inevitable and plan rotation accordingly.
 
 ---
 
@@ -140,9 +144,9 @@ From [package.json](package.json):
 - **Pan/zoom:** drag canvas, scroll/pinch to zoom
 - **Node details:** click a node
 - **Open paper:** double-click node (or use detail panel link)
-- **Filters:** use top pills (scope/domain/source)
-- **Chat:** open `💬 Chat`, ask natural language graph queries
-- **Rankings:** open `📊 Ranks` and switch metric tabs
+- **Filters:** top pills for scope/domain/source slicing
+- **Chat:** open `💬 Chat` and issue graph-native prompts
+- **Rankings:** open `📊 Ranks`, switch metric tabs, compare structures
 - **Theme:** toggle with `🌙 / ☀️`
 - **Command palette:** `Cmd/Ctrl + K`
 
@@ -156,6 +160,8 @@ This is a static app. Build step is not required.
 2. Point static host at repo root
 3. Publish `index.html` + `styles/` + `src/`
 
+If you can host static files, you can ship this.
+
 ---
 
 ## Roadmap Ideas
@@ -164,6 +170,14 @@ This is a static app. Build step is not required.
 - Add snapshot/export for graph state
 - Add richer graph legends and edge provenance inspector
 - Add tests for panel state transitions and mobile interactions
+
+---
+
+## Why this exists
+
+Because most literature maps are decorative. This one is operational.
+
+It lets you interrogate a body of work instead of merely admiring it.
 
 ---
 
