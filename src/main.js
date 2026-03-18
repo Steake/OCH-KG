@@ -24,6 +24,7 @@ import { highlight, unhighlight, showNodeTip, showLinkTip, moveLinkTip, bindFilt
 import { openNodeDetail, closeNodeDetail, nodeDetailId } from './panels/detail.js';
 import { renderRankings, setRankTab } from './panels/rankings.js';
 import { addMsg, chatHistory, executeActions, chatHighlightNodes, chatFocusNode, clearChatActions, renderInferred, chatMode, setChatMode, attachBubbleHighlight } from './panels/chat.js';
+import { BottomSheet } from './ui/bottom-sheet.js';
 
 import { callGraphLLM }    from './ai/graph-llm.js';
 import { classifyWithLLM } from './ai/classify.js';
@@ -318,6 +319,16 @@ computeAllMetrics();
 let rankingsPanelOpen = false;
 let chatPanelOpen     = false;
 
+let bsRankings = null, bsChat = null;
+if (window.innerWidth < 640) {
+  bsRankings = new BottomSheet('rankingsPanel', {
+    onClose: () => { rankingsPanelOpen = false; document.getElementById('rankingsToggle').classList.remove('active'); }
+  });
+  bsChat = new BottomSheet('chatPanel', {
+    onClose: () => { chatPanelOpen = false; document.getElementById('chatToggle').classList.remove('active'); }
+  });
+}
+
 function _renderRankings() {
   renderRankings({
     G: window._G, nodes, links: LINKS, idxOf: _idxOf, nmap, selected,
@@ -339,27 +350,31 @@ window._jumpFromRankings = id => {
 
 function openRankingsPanel() {
   rankingsPanelOpen = true;
-  document.getElementById('rankingsPanel').classList.add('open');
+  if (bsRankings) bsRankings.open();
+  else document.getElementById('rankingsPanel').classList.add('open');
   document.getElementById('rankingsToggle').classList.add('active');
   _renderRankings();
 }
 
 function closeRankingsPanel() {
   rankingsPanelOpen = false;
-  document.getElementById('rankingsPanel').classList.remove('open');
+  if (bsRankings) bsRankings.close();
+  else document.getElementById('rankingsPanel').classList.remove('open');
   document.getElementById('rankingsToggle').classList.remove('active');
 }
 
 function openChatPanel() {
   chatPanelOpen = true;
-  document.getElementById('chatPanel').classList.add('open');
+  if (bsChat) bsChat.open();
+  else document.getElementById('chatPanel').classList.add('open');
   document.getElementById('chatToggle').classList.add('active');
   document.getElementById('chatInput').focus();
 }
 
 function closeChatPanel() {
   chatPanelOpen = false;
-  document.getElementById('chatPanel').classList.remove('open');
+  if (bsChat) bsChat.close();
+  else document.getElementById('chatPanel').classList.remove('open');
   document.getElementById('chatToggle').classList.remove('active');
 }
 
@@ -480,6 +495,21 @@ window.setChatModeUI = function(mode) {
 document.getElementById('chatInput').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendChat(); }
 });
+
+// ── Mobile: resize chat panel when virtual keyboard opens ──────────────────
+if (window.visualViewport && window.innerWidth < 640) {
+  const chatPanel = document.getElementById('chatPanel');
+  window.visualViewport.addEventListener('resize', () => {
+    if (chatPanelOpen) {
+      const vvH = window.visualViewport.height;
+      chatPanel.style.height = `${Math.min(vvH - 48, window.innerHeight * 0.85)}px`;
+    }
+  });
+  // Reset height when keyboard dismisses
+  document.getElementById('chatInput').addEventListener('blur', () => {
+    chatPanel.style.height = '';
+  });
+}
 
 // ── Model persistence ─────────────────────────────────────────────────────
 const savedModel = localStorage.getItem('kg_model');

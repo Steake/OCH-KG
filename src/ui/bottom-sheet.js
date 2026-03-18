@@ -8,6 +8,7 @@ export class BottomSheet {
     this.dragStart = 0;
     this.currentY = 0;
     this.snapPoints = options.snapPoints || [0, 0.5, 0.92]; // 0% (closed), 50%, 92%
+    this.onClose = options.onClose || null;
     
     this._init();
   }
@@ -75,5 +76,6 @@ export class BottomSheet {
     this.backdrop.classList.remove('show');
     this.isOpen = false;
     document.body.classList.remove('bs-active');
+    if (this.onClose) this.onClose();
   }
 }
