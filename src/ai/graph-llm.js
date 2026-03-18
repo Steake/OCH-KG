@@ -1,9 +1,17 @@
 // ═══════════════════════════════════════════════════════════
 // GRAPH LLM — Natural language query → graph actions
 // ═══════════════════════════════════════════════════════════
-import { callOpenRouterChat } from './client.js';
+import { callOpenRouterChat, callOpenRouterChatStream } from './client.js';
 
-export async function callGraphLLM(query, history, OLI, CITED, ARXIV, ZENODO_KW, mode = 'graph') {
+function _extractJsonObject(content) {
+  const stripped = (content || '').replace(/```json?\n?/g,'').replace(/```/g,'').trim();
+  const m = stripped.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('No JSON object in response. Got: ' + stripped.slice(0, 80));
+  try { return JSON.parse(m[0]); }
+  catch (pe) { throw new Error('JSON parse failed: ' + pe.message); }
+}
+
+export async function callGraphLLM(query, history, OLI, CITED, ARXIV, ZENODO_KW, mode = 'graph', streamHandlers = {}) {
   const oliLines   = OLI.map(n   => `${n.id}[${n.cluster}★] "${n.short}" — ${(n.tags||[]).slice(0,3).join(', ')}`);
   const citedLines = CITED.map(n => `${n.id}[${n.cluster}] "${n.short}"`);
   const arxivLines = ARXIV.map(n => `${n.id}[${n.cluster}] "${n.short}"`);
@@ -53,6 +61,16 @@ You MUST respond with ONLY a JSON object, no markdown, no explanation outside JS
     ...history.slice(-8).map(m => ({ role:m.role, content:m.content })),
     { role:'user', content:query }
   ];
+
+  if (streamHandlers?.onText || streamHandlers?.onCoT) {
+    const streamed = await callOpenRouterChatStream(sys, msgs, 900, {
+      onText: streamHandlers.onText,
+      onCoT: streamHandlers.onCoT,
+    });
+    const parsed = _extractJsonObject(streamed.content || '{}');
+    if (streamed.cot) parsed.cot = streamed.cot;
+    return parsed;
+  }
 
   return callOpenRouterChat(sys, msgs, 900);
 }

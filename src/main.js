@@ -487,6 +487,20 @@ const chatCtx = () => ({
 });
 
 let _chatRequestInFlight = false;
+const _esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function _renderThinkingBubble(el, textAgg, cotAgg, mode) {
+  if (!el || !el.isConnected) return;
+  const hasText = !!(textAgg && textAgg.trim());
+  const hasCoT = !!(cotAgg && cotAgg.trim());
+  const title = mode === 'graph' ? '⟳ Planning graph ops…' : '⟳ Generating…';
+  el.innerHTML = `
+    <div class="ch-stream-title">${title}</div>
+    ${hasText ? `<div class="ch-stream-text">${_esc(textAgg).replace(/\n/g,'<br>')}</div>` : ''}
+    ${hasCoT ? `<details class="ch-stream-cot" open><summary>CoT stream</summary><div>${_esc(cotAgg).replace(/\n/g,'<br>')}</div></details>` : ''}
+  `;
+}
+
 function _setChatBusyUI(isBusy) {
   const sendBtn = document.getElementById('chatSend');
   const input = document.getElementById('chatInput');
@@ -504,10 +518,21 @@ window.sendChat = async function(queryOverride) {
   _chatRequestInFlight = true;
   _setChatBusyUI(true);
   if (!queryOverride) input.value = '';
-  addMsg('user', query.replace(/</g,'&lt;'));
+  addMsg('user', _esc(query));
   const thinking = addMsg('thinking', '⟳ Thinking…');
+  let _streamText = '';
+  let _streamCoT = '';
   try {
-    const result   = await callGraphLLM(query, chatHistory, OLI, CITED, ARXIV, ZENODO_KW, chatMode);
+    const result = await callGraphLLM(query, chatHistory, OLI, CITED, ARXIV, ZENODO_KW, chatMode, {
+      onText: (_delta, agg) => {
+        _streamText = agg;
+        _renderThinkingBubble(thinking, _streamText, _streamCoT, chatMode);
+      },
+      onCoT: (_delta, agg) => {
+        _streamCoT = agg;
+        _renderThinkingBubble(thinking, _streamText, _streamCoT, chatMode);
+      },
+    });
     if (thinking?.isConnected) thinking.remove();
 
     let highlightIds = [];
@@ -529,9 +554,16 @@ window.sendChat = async function(queryOverride) {
     }
 
     const msgEl = addMsg('assistant', `
-      <div class="ch-narrative">${(result.narrative||'Done.').replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+      <div class="ch-narrative">${_esc(result.narrative||'Done.').replace(/\n/g,'<br>')}</div>
       ${tagHtml ? `<div class="ch-actions">${tagHtml}</div>` : ''}
     `);
+
+    if (chatMode === 'graph' && result.cot) {
+      const cotWrap = document.createElement('details');
+      cotWrap.className = 'ch-cot-block';
+      cotWrap.innerHTML = `<summary>CoT trace</summary><div>${_esc(result.cot).replace(/\n/g,'<br>')}</div>`;
+      msgEl.appendChild(cotWrap);
+    }
 
     // Attach hover-to-re-highlight on this bubble
     if (highlightIds.length) {
@@ -544,7 +576,7 @@ window.sendChat = async function(queryOverride) {
     chatHistory.push({role:'assistant',content:result.narrative||''});
   } catch(err) {
     if (thinking?.isConnected) thinking.remove();
-    addMsg('error', `⚠ ${(err.message||'AI error').replace(/</g,'&lt;')}`);
+    addMsg('error', `⚠ ${_esc(err.message||'AI error')}`);
   } finally {
     _chatRequestInFlight = false;
     _setChatBusyUI(false);
