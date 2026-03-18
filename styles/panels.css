@@ -59,6 +59,8 @@
   border: 1px solid rgba(255,255,255,0.1);
   background: rgba(255,255,255,0.04);
   color: #556080; font-size: 14px; line-height: 26px; text-align: center;
+  font-family: -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif;
+  font-weight: 500;
   cursor: pointer; transition: all 0.15s;
 }
 #ndClose:hover { background: rgba(255,255,255,0.1); color: #fff; }
@@ -144,6 +146,8 @@
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.1);
   color: #556080; font-size: 14px; line-height: 26px; text-align: center;
+  font-family: -apple-system, 'SF Pro Display', 'Inter', 'Segoe UI', sans-serif;
+  font-weight: 500;
   cursor: pointer; transition: all 0.15s;
 }
 .panel-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
@@ -228,12 +232,19 @@
   }
 
   /* Panel close button: enlarge touch target on mobile */
-  .panel-close {
+  .panel-close,
+  #ndClose {
     width: var(--touch-min); height: var(--touch-min);
     font-size: 18px; line-height: var(--touch-min);
     border-radius: 50%;
     /* Ensure it sits above the bs-handle */
-    position: relative; z-index: 2;
+    z-index: 2;
+  }
+  .panel-close { position: relative; }
+  #ndClose { position: absolute; }
+  #ndClose {
+    top: 8px;
+    right: 10px;
   }
 
   /* Panel header: bump z to sit above prepended bs-handle */
