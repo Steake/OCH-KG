@@ -22,6 +22,7 @@ export async function callOpenRouter(prompt, maxTokens = 400) {
       max_tokens: maxTokens,
     })
   });
+  if (r.status === 401) throw new Error('401: Unauthorised — check OPENROUTER_KEY.');
   if (r.status === 402) throw new Error('402: Model requires credits. Select a :free model.');
   if (r.status === 404) throw new Error(`404: Model not found — "${currentModel}"`);
   if (!r.ok) {
@@ -52,6 +53,7 @@ export async function callOpenRouterChat(systemPrompt, messages, maxTokens = 900
       max_tokens: maxTokens,
     })
   });
+  if (r.status === 401) throw new Error('401: Unauthorised — check OPENROUTER_KEY.');
   if (r.status === 402) throw new Error('402: Model "'+currentModel+'" requires credits. Switch to a :free model.');
   if (r.status === 404) throw new Error('404: Model "'+currentModel+'" not found.');
   if (!r.ok) { const t = await r.text().catch(()=>''); throw new Error(r.status+': '+(t.slice(0,120)||'OpenRouter error')); }
