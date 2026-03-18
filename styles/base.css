@@ -195,6 +195,13 @@ body.menu-open {
   overflow: hidden;
   touch-action: none;          /* prevent scroll-through on iOS */
 }
+/* backdrop-filter creates a containing block on Safari/iOS,
+   trapping position:fixed children inside the header strip.
+   Remove it while the full-screen nav overlay is open. */
+body.menu-open #header {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
 
 @media (max-width: 639px) {
   #hamburger {
