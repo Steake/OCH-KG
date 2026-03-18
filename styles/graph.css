@@ -146,10 +146,30 @@ body.theme-light .node text {
   text-shadow: 0 1px 4px rgba(255,255,255,0.9), 0 0 2px rgba(255,255,255,1);
   fill: #1a1d2e;
 }
+/* Make light-mode graph colors legible against bright canvas */
+body.theme-light .node:not(.oli) > circle:first-of-type {
+  fill-opacity: 0.34 !important;
+  stroke-opacity: 0.82 !important;
+  stroke-width: 1.5 !important;
+}
+body.theme-light .node.oli > circle:nth-of-type(2) {
+  fill-opacity: 0.42 !important;
+  stroke-opacity: 0.96 !important;
+}
+body.theme-light .node.oli > circle:first-of-type {
+  stroke-opacity: 0.35 !important;
+}
+body.theme-light .link {
+  stroke-opacity: 0.72 !important;
+}
 body.theme-light .node.faded circle,
 body.theme-light .node.faded ellipse { opacity: 0.15; }
 body.theme-light .node.faded text { opacity: 0.12; }
 body.theme-light .link.faded { opacity: 0.06; }
+body.theme-light .cluster-hull {
+  fill-opacity: 0.085;
+  stroke-opacity: 0.2;
+}
 body.theme-light #tip, body.theme-light #linkTip {
   box-shadow: 0 8px 32px rgba(0,0,0,0.12);
 }
