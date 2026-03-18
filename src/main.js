@@ -480,6 +480,42 @@ window.clearChatActions = () => {
   tempLinks = clearChatActions(nodeEl, linkEl, chatDimRect, svg, g.select('#inferredEdges'));
 };
 
+window._showNodesByKeyword = function(tag, sourceId) {
+  const q = String(tag || '').trim().toLowerCase();
+  if (!q) return;
+
+  const matched = nodes.filter(n =>
+    Array.isArray(n.tags) && n.tags.some(t => String(t || '').toLowerCase().includes(q))
+  );
+
+  if (sourceId && nmap[sourceId] && !matched.find(n => n.id === sourceId)) {
+    matched.push(nmap[sourceId]);
+  }
+
+  if (!matched.length) {
+    addMsg('error', `⚠ No nodes found for keyword: ${_esc(tag)}`);
+    return;
+  }
+
+  const idSet = new Set(matched.map(n => n.id));
+  nodeEl.classed('faded', n => !idSet.has(n.id));
+  linkEl.classed('faded', l => {
+    const s = l.source?.id || l.source;
+    const t = l.target?.id || l.target;
+    return !(idSet.has(s) && idSet.has(t));
+  }).classed('lit', l => {
+    const s = l.source?.id || l.source;
+    const t = l.target?.id || l.target;
+    return idSet.has(s) && idSet.has(t);
+  });
+
+  chatDimRect?.transition().duration(280).attr('fill-opacity', 0.78);
+  svg?.classed('chat-subgraph', true);
+
+  const preview = matched.slice(0, 5).map(n => n.short || n.title || n.id).join(', ');
+  addMsg('assistant', `<div class="ch-narrative">Keyword <strong>${_esc(tag)}</strong>: ${matched.length} related nodes${preview ? ` — ${_esc(preview)}` : ''}${matched.length > 5 ? '…' : ''}</div>`);
+};
+
 const chatCtx = () => ({
   nodes, nmap, linkData, nodeEl, linkEl, chatDimRect, svg,
   g, tempLinks, linkTip, sim,

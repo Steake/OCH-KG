@@ -59,7 +59,19 @@ export function openNodeDetail(d, linkData, nmap, G) {
   const tagsSec = document.getElementById('ndTagsSection');
   const tags    = document.getElementById('ndTags');
   if (d.tags?.length) {
-    tags.innerHTML = d.tags.map(t => `<span class="nd-tag">${t}</span>`).join('');
+    const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    tags.innerHTML = d.tags.map(t => `
+      <button type="button" class="nd-tag nd-tag-btn" data-tag="${esc(t)}" title="Show nodes sharing \"${esc(t)}\"">
+        ${esc(t)}
+      </button>
+    `).join('');
+    tags.querySelectorAll('.nd-tag-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tag = btn.dataset.tag || btn.textContent?.trim();
+        if (tag && window._showNodesByKeyword) window._showNodesByKeyword(tag, d.id);
+      });
+    });
     tagsSec.style.display = '';
   } else {
     tagsSec.style.display = 'none';
