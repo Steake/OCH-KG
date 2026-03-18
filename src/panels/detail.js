@@ -5,9 +5,21 @@ import { CLUSTER_BADGE, EDGE_COLOR } from '../config.js';
 import { BottomSheet } from '../ui/bottom-sheet.js';
 
 let bsDetail = null;
-if (window.innerWidth < 640) {
+const _detailMQ = window.matchMedia('(max-width: 639px)');
+
+function _initDetailSheet() {
+  if (bsDetail) return;
   bsDetail = new BottomSheet('nodeDetail');
 }
+function _destroyDetailSheet() {
+  if (bsDetail) { bsDetail.destroy(); bsDetail = null; }
+}
+
+if (_detailMQ.matches) _initDetailSheet();
+_detailMQ.addEventListener('change', e => {
+  if (e.matches) { _initDetailSheet(); }
+  else { _destroyDetailSheet(); }
+});
 
 export let nodeDetailOpen = false;
 export let nodeDetailId   = null;
@@ -16,7 +28,7 @@ export function openNodeDetail(d, linkData, nmap, G) {
   nodeDetailOpen = true;
   nodeDetailId   = d.id;
 
-  if (bsDetail) bsDetail.open();
+  if (_detailMQ.matches && bsDetail) bsDetail.open();
   else document.getElementById('nodeDetail').classList.add('open');
 
   // Meta badges
@@ -115,6 +127,6 @@ export function openNodeDetail(d, linkData, nmap, G) {
 export function closeNodeDetail() {
   nodeDetailOpen = false;
   nodeDetailId   = null;
-  if (bsDetail) bsDetail.close();
+  if (_detailMQ.matches && bsDetail) bsDetail.close();
   else document.getElementById('nodeDetail').classList.remove('open');
 }

@@ -93,13 +93,15 @@ const chatDimRect = g.append("rect")
 // ── Mobile Menu Toggle ─────────────────────────────────────────────────────
 window.toggleMenu = function() {
   const nav = document.getElementById('controls');
-  nav.classList.toggle('open');
+  const isOpen = nav.classList.toggle('open');
+  document.body.classList.toggle('menu-open', isOpen);
 };
 
 // Auto-close mobile menu when any pill / button is tapped
 document.getElementById('controls').addEventListener('click', e => {
   if (e.target.closest('.pill') && window.innerWidth <= 639) {
     document.getElementById('controls').classList.remove('open');
+    document.body.classList.remove('menu-open');
   }
 });
 
@@ -319,15 +321,58 @@ computeAllMetrics();
 let rankingsPanelOpen = false;
 let chatPanelOpen     = false;
 
+/* ── Responsive BottomSheet management ──
+   Create / destroy sheets when crossing the 640px breakpoint
+   so orientation changes work correctly.                       */
 let bsRankings = null, bsChat = null;
-if (window.innerWidth < 640) {
+const mobileQuery = window.matchMedia('(max-width: 639px)');
+
+function _isMobile() { return mobileQuery.matches; }
+
+function _createSheets() {
+  if (bsRankings) return; // already created
   bsRankings = new BottomSheet('rankingsPanel', {
-    onClose: () => { rankingsPanelOpen = false; document.getElementById('rankingsToggle').classList.remove('active'); }
+    onClose: () => {
+      rankingsPanelOpen = false;
+      document.getElementById('rankingsToggle')?.classList.remove('active');
+    }
   });
   bsChat = new BottomSheet('chatPanel', {
-    onClose: () => { chatPanelOpen = false; document.getElementById('chatToggle').classList.remove('active'); }
+    onClose: () => {
+      chatPanelOpen = false;
+      document.getElementById('chatToggle')?.classList.remove('active');
+    }
   });
 }
+
+function _destroySheets() {
+  if (bsRankings) { bsRankings.destroy(); bsRankings = null; }
+  if (bsChat)     { bsChat.destroy();     bsChat     = null; }
+}
+
+function _onBreakpointChange(e) {
+  if (e.matches) {
+    // Entering mobile — create sheets, close any desktop-open panels first
+    if (rankingsPanelOpen) document.getElementById('rankingsPanel').classList.remove('open');
+    if (chatPanelOpen) document.getElementById('chatPanel').classList.remove('open');
+    rankingsPanelOpen = false; chatPanelOpen = false;
+    document.getElementById('rankingsToggle')?.classList.remove('active');
+    document.getElementById('chatToggle')?.classList.remove('active');
+    _createSheets();
+  } else {
+    // Leaving mobile — destroy sheets, close any mobile-open panels
+    _destroySheets();
+    if (rankingsPanelOpen) document.getElementById('rankingsPanel').classList.remove('open');
+    if (chatPanelOpen) document.getElementById('chatPanel').classList.remove('open');
+    rankingsPanelOpen = false; chatPanelOpen = false;
+    document.getElementById('rankingsToggle')?.classList.remove('active');
+    document.getElementById('chatToggle')?.classList.remove('active');
+  }
+}
+
+// Initialise for the current viewport
+if (_isMobile()) _createSheets();
+mobileQuery.addEventListener('change', _onBreakpointChange);
 
 function _renderRankings() {
   renderRankings({
@@ -350,7 +395,7 @@ window._jumpFromRankings = id => {
 
 function openRankingsPanel() {
   rankingsPanelOpen = true;
-  if (bsRankings) bsRankings.open();
+  if (_isMobile() && bsRankings) bsRankings.open();
   else document.getElementById('rankingsPanel').classList.add('open');
   document.getElementById('rankingsToggle').classList.add('active');
   _renderRankings();
@@ -358,14 +403,14 @@ function openRankingsPanel() {
 
 function closeRankingsPanel() {
   rankingsPanelOpen = false;
-  if (bsRankings) bsRankings.close();
+  if (_isMobile() && bsRankings) bsRankings.close();
   else document.getElementById('rankingsPanel').classList.remove('open');
   document.getElementById('rankingsToggle').classList.remove('active');
 }
 
 function openChatPanel() {
   chatPanelOpen = true;
-  if (bsChat) bsChat.open();
+  if (_isMobile() && bsChat) bsChat.open();
   else document.getElementById('chatPanel').classList.add('open');
   document.getElementById('chatToggle').classList.add('active');
   document.getElementById('chatInput').focus();
@@ -373,7 +418,7 @@ function openChatPanel() {
 
 function closeChatPanel() {
   chatPanelOpen = false;
-  if (bsChat) bsChat.close();
+  if (_isMobile() && bsChat) bsChat.close();
   else document.getElementById('chatPanel').classList.remove('open');
   document.getElementById('chatToggle').classList.remove('active');
 }
@@ -497,17 +542,16 @@ document.getElementById('chatInput').addEventListener('keydown', e => {
 });
 
 // ── Mobile: resize chat panel when virtual keyboard opens ──────────────────
-if (window.visualViewport && window.innerWidth < 640) {
-  const chatPanel = document.getElementById('chatPanel');
+if (window.visualViewport) {
+  const _chatPanel = document.getElementById('chatPanel');
   window.visualViewport.addEventListener('resize', () => {
-    if (chatPanelOpen) {
+    if (chatPanelOpen && _isMobile()) {
       const vvH = window.visualViewport.height;
-      chatPanel.style.height = `${Math.min(vvH - 48, window.innerHeight * 0.85)}px`;
+      _chatPanel.style.height = `${Math.min(vvH - 48, window.innerHeight * 0.85)}px`;
     }
   });
-  // Reset height when keyboard dismisses
   document.getElementById('chatInput').addEventListener('blur', () => {
-    chatPanel.style.height = '';
+    _chatPanel.style.height = '';
   });
 }
 
@@ -844,8 +888,15 @@ document.getElementById('cmdKOverlay').addEventListener('click', function(e) {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    // Close in priority order: CmdK → Mobile menu → Panels
     const cmdK = document.getElementById('cmdKOverlay');
     if (cmdK && cmdK.classList.contains('open')) { cmdK.classList.remove('open'); return; }
+    const nav = document.getElementById('controls');
+    if (nav.classList.contains('open')) {
+      nav.classList.remove('open');
+      document.body.classList.remove('menu-open');
+      return;
+    }
     closeNodeDetail();
     if (rankingsPanelOpen) closeRankingsPanel();
     if (chatPanelOpen) closeChatPanel();

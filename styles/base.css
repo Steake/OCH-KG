@@ -189,20 +189,40 @@ body.theme-light .header-brand { color: var(--text-primary); }
   flex-shrink: 0;
 }
 
+/* ── Body scroll-lock when BottomSheet or mobile menu is open ── */
+body.bs-active,
+body.menu-open {
+  overflow: hidden;
+  touch-action: none;          /* prevent scroll-through on iOS */
+}
+
 @media (max-width: 639px) {
-  #hamburger { display: block; }
+  #hamburger {
+    display: flex; align-items: center; justify-content: center;
+    min-width: var(--touch-min); min-height: var(--touch-min);
+    -webkit-tap-highlight-color: transparent;
+  }
   #header { height: 48px; }
   #controls { display: none; }
   #controls.open {
     display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background: var(--bg-surface); z-index: 700;
-    flex-direction: column; padding: var(--safe-top) var(--space-md) var(--safe-bottom);
+    flex-direction: column;
+    padding: max(var(--safe-top), 12px) var(--space-md) max(var(--safe-bottom), 12px);
     gap: var(--space-md); overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;   /* prevent pull-to-refresh */
     align-items: flex-start; margin: 0;
   }
   .mobile-close {
-    display: block; align-self: flex-end; background: none; border: none;
-    color: var(--text-primary); font-size: 24px; padding: var(--space-md); margin-right: -10px;
+    display: flex; align-items: center; justify-content: center;
+    align-self: flex-end;
+    background: none; border: none;
+    color: var(--text-primary); font-size: 24px;
+    min-width: var(--touch-min); min-height: var(--touch-min);
+    margin-right: -10px; margin-top: -4px;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
   }
   .control-group {
     flex-direction: column; align-items: flex-start;
@@ -221,6 +241,13 @@ body.theme-light .header-brand { color: var(--text-primary); }
   .actions-group::before { content: "Actions"; display: block; font-size: 10px; text-transform: uppercase; color: var(--text-tertiary); letter-spacing: 0.05em; width: 100%; }
   .pill { width: 100%; justify-content: flex-start; min-height: var(--touch-min); }
   .pill-lbl { font-size: 12px; opacity: 1; }
+
+  /* Search goes full width on mobile */
+  .search-wrap { width: 100%; margin-right: 0; }
+  #search { width: 100%; min-height: var(--touch-min); font-size: 14px; padding: 8px 12px; }
+
+  /* Hide stats bar on mobile — too cramped */
+  #stats { display: none; }
 }
 
 /* ── PILLS ── */
