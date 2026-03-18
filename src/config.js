@@ -63,4 +63,3 @@ export const EDGE_COLOR = {
 
 export const OPENROUTER_KEY = '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';
 export const DEFAULT_MODEL   = 'openrouter/hunter-alpha';
-export const DEFAULT_MODEL = 'openrouter/hunter-alpha';
