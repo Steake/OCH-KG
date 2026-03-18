@@ -82,6 +82,12 @@ export function attachBubbleHighlight(msgEl, highlightIds, ctx) {
     // Only unhighlight if no other interaction is active
     chatHighlightNodes([], ctx.nodeEl, ctx.linkEl, ctx.linkData, ctx.chatDimRect, ctx.svg);
   });
+  // Mobile/touch support: tap bubble to toggle highlight visibility.
+  msgEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const on = msgEl.classList.toggle('ch-active');
+    chatHighlightNodes(on ? highlightIds : [], ctx.nodeEl, ctx.linkEl, ctx.linkData, ctx.chatDimRect, ctx.svg);
+  });
 }
 
 // ── Visual chat helpers ────────────────────────────────────────────────────
@@ -247,11 +253,23 @@ export function executeActions(actions, ctx) {
       }
       case 'filter_cluster': {
         const cl = act.cluster;
-        nodeEl.classed('faded', n => n.cluster !== cl && !n.isOli);
+        const visibleIds = new Set(
+          nodes.filter(n => n.cluster === cl || n.isOli).map(n => n.id)
+        );
+
+        nodeEl.classed('faded', n => !visibleIds.has(n.id));
         linkEl.classed('faded', l => {
           const s = nmap[l.source?.id||l.source], t = nmap[l.target?.id||l.target];
-          return !(s?.cluster===cl || t?.cluster===cl);
+          return !(s && t && visibleIds.has(s.id) && visibleIds.has(t.id));
+        }).classed('lit', l => {
+          const s = nmap[l.source?.id||l.source], t = nmap[l.target?.id||l.target];
+          return !!(s && t && visibleIds.has(s.id) && visibleIds.has(t.id));
         });
+
+        // Use the same spotlight mode as highlight actions so filtering is obvious.
+        chatDimRect?.transition().duration(280).attr('fill-opacity', 0.76);
+        svg?.classed('chat-subgraph', true);
+
         executed.push({ label:`Filtered: ${cl}`, color:'#f0a040' });
         break;
       }

@@ -391,9 +391,17 @@ body.theme-light .ch-msg-btn.loading {
   border-color: rgba(110,159,255,0.35);
   box-shadow: 0 0 8px rgba(110,159,255,0.12);
 }
+.ch-hoverable.ch-active {
+  border-color: rgba(110,159,255,0.42);
+  box-shadow: 0 0 10px rgba(110,159,255,0.18);
+}
 body.theme-light .ch-hoverable:hover {
   border-color: rgba(59,111,216,0.3);
   box-shadow: 0 0 8px rgba(59,111,216,0.08);
+}
+body.theme-light .ch-hoverable.ch-active {
+  border-color: rgba(59,111,216,0.38);
+  box-shadow: 0 0 10px rgba(59,111,216,0.14);
 }
 
 #chatMessages {
