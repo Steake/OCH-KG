@@ -328,6 +328,9 @@ let bsRankings = null, bsChat = null;
 const mobileQuery = window.matchMedia('(max-width: 639px)');
 
 function _isMobile() { return mobileQuery.matches; }
+function _panelIsOpen(id) {
+  return document.getElementById(id)?.classList.contains('open');
+}
 
 function _createSheets() {
   if (bsRankings) return; // already created
@@ -340,6 +343,11 @@ function _createSheets() {
   bsChat = new BottomSheet('chatPanel', {
     onClose: () => {
       chatPanelOpen = false;
+      const chatEl = document.getElementById('chatPanel');
+      if (chatEl) {
+        chatEl.style.height = '';
+        chatEl.style.bottom = '';
+      }
       document.getElementById('chatToggle')?.classList.remove('active');
     }
   });
@@ -409,31 +417,39 @@ function closeRankingsPanel() {
 }
 
 function openChatPanel() {
+  const panel = document.getElementById('chatPanel');
+  if (!panel) return;
   chatPanelOpen = true;
   if (_isMobile() && bsChat) bsChat.open();
-  else document.getElementById('chatPanel').classList.add('open');
+  else panel.classList.add('open');
+  // If mobile menu is open, close it so chat is the only active surface.
+  document.getElementById('controls')?.classList.remove('open');
+  document.body.classList.remove('menu-open');
   document.getElementById('chatToggle').classList.add('active');
   document.getElementById('chatInput').focus();
 }
 
 function closeChatPanel() {
+  const chatEl = document.getElementById('chatPanel');
+  if (!chatEl) return;
   chatPanelOpen = false;
   if (_isMobile() && bsChat) bsChat.close();
-  else document.getElementById('chatPanel').classList.remove('open');
-  const chatEl = document.getElementById('chatPanel');
+  else chatEl.classList.remove('open');
   chatEl.style.height = '';
   chatEl.style.bottom = '';
   document.getElementById('chatToggle').classList.remove('active');
 }
 
 window.toggleChat = () => {
-  if (chatPanelOpen) closeChatPanel();
+  if (_panelIsOpen('chatPanel')) closeChatPanel();
   else openChatPanel();
 };
 window.toggleRankings = () => {
-  if (rankingsPanelOpen) closeRankingsPanel();
+  if (_panelIsOpen('rankingsPanel')) closeRankingsPanel();
   else openRankingsPanel();
 };
+window.closeChatPanel = closeChatPanel;
+window.closeRankingsPanel = closeRankingsPanel;
 window.setRankTab = metric => setRankTab(metric, _renderRankings);
 
 // ═══════════════════════════════════════════════════════════
