@@ -1,0 +1,14 @@
+{
+  "name": "knowledge-graph",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Oliver C. Hirst — Research Knowledge Graph",
+  "scripts": {
+    "dev": "browser-sync start --server --files '**/*.html, **/*.css, src/**/*.js' --no-notify --port 3000",
+    "start": "npx serve -l 3000 -s .",
+    "serve": "npx serve -l 3000 -s ."
+  },
+  "devDependencies": {
+    "browser-sync": "^3.0.0"
+  }
+}

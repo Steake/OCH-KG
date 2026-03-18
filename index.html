@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oliver C. Hirst — Research Knowledge Graph</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/graph.css">
+<link rel="stylesheet" href="styles/panels.css">
+</head>
+<body class="theme-dark">
+
+<header id="header">
+  <button id="hamburger" onclick="toggleMenu()" aria-label="Open menu">☰</button>
+  <div class="header-brand" title="Citation network · arXiv/Zenodo/Semantic Scholar discovery · EQBSL trust propagation">OCH<span class="header-dot">·</span>KG</div>
+  <nav id="controls">
+    <button class="mobile-close" onclick="toggleMenu()">✕</button>
+    <div class="search-wrap">
+      <input id="search" type="text" placeholder="Search…" aria-label="Search across papers" />
+    </div>
+    <div class="control-group filter-group">
+      <button class="pill active" data-f="all" aria-label="Show all papers">All</button>
+      <button class="pill" data-f="oli" aria-label="Show only papers by Oliver C. Hirst">Oli</button>
+    </div>
+    <div class="control-group domain-group">
+      <button class="pill" data-f="consciousness" aria-label="Filter by Consciousness">🧠<span class="pill-lbl">Mind</span></button>
+      <button class="pill" data-f="trust" aria-label="Filter by Trust and Bayesian">🔗<span class="pill-lbl">Trust</span></button>
+      <button class="pill" data-f="crypto" aria-label="Filter by Crypto and ZK">🔐<span class="pill-lbl">ZK</span></button>
+      <button class="pill" data-f="collective" aria-label="Filter by Collective">🌐<span class="pill-lbl">Coll</span></button>
+    </div>
+    <div class="control-group source-group">
+      <button class="pill" data-f="arxiv" aria-label="Filter by arXiv">arXiv</button>
+      <button class="pill" data-f="zenodo" aria-label="Filter by Zenodo">Zenodo</button>
+    </div>
+    <div class="control-group viz-group">
+      <button class="pill" id="hullsBtn" onclick="toggleHulls()" aria-label="Toggle hulls">⬡<span class="pill-lbl">Hulls</span></button>
+      <button class="pill" id="spectralBtn" onclick="toggleSpectral()" aria-label="Toggle spectral layout">⬡<span class="pill-lbl">Layout</span></button>
+    </div>
+    <div class="control-group actions-group">
+      <button class="pill" id="addBtn" onclick="toggleAddPanel()" aria-label="Add paper">＋<span class="pill-lbl">Add</span></button>
+      <button class="pill" id="aiEdgesBtn" onclick="batchAIEdges()" title="AI semantic edges" aria-label="AI edges">🤖<span class="pill-lbl">AI</span></button>
+      <button class="pill" id="chatToggle" onclick="toggleChat()" title="Chat explorer" aria-label="Chat">💬<span class="pill-lbl">Chat</span></button>
+      <button class="pill" id="rankingsToggle" onclick="toggleRankings()" title="Rankings" aria-label="Rankings">📊<span class="pill-lbl">Ranks</span></button>
+      <button class="pill" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">🌙</button>
+    </div>
+  </nav>
+</header>
+
+<div id="addPanel" style="display:none;">
+  <div class="title">Add a paper to the graph</div>
+  <div class="sub">Paste a DOI, arXiv ID, Zenodo URL, or arXiv URL</div>
+  <input id="addInput" type="text" placeholder="e.g. 10.5281/zenodo.12345 or arxiv:2301.00000" aria-label="Paper ID or URL">
+  <button onclick="addPaperFromUrl()" aria-label="Fetch and classify paper">Classify &amp; Add →</button>
+  <div id="addStatus"></div>
+</div>
+
+<div id="aiProgress">
+  <span id="aiProgressText">Generating AI edges…</span>
+  <div id="aiProgressBar"><div id="aiProgressFill" style="width:0%"></div></div>
+</div>
+
+<main id="main">
+  <svg id="canvas"></svg>
+</main>
+<div id="tip"></div>
+<div id="linkTip"></div>
+
+<aside id="legend" class="collapsed">
+  <button id="legendToggle" onclick="toggleLegend()" aria-label="Toggle legend">
+    <span class="legend-icon">◉</span>
+    <span class="legend-label">Legend</span>
+    <span class="legend-chev">›</span>
+  </button>
+  <div class="legend-body">
+    <h4>Node type</h4>
+    <div class="li"><div class="ld" style="background:#6e9fff;box-shadow:0 0 8px #4a7adf;border:2px solid #8ab4ff"></div> Oli's papers</div>
+    <div class="li"><div class="ld" style="background:#b07dff"></div> Consciousness / Cognition</div>
+    <div class="li"><div class="ld" style="background:#5ecfa0"></div> Trust / Subjective Logic</div>
+    <div class="li"><div class="ld" style="background:#f0a040"></div> Crypto / ZK</div>
+    <div class="li"><div class="ld" style="background:#60c8f0"></div> Collective / Multi-agent</div>
+    <div class="lsep"></div>
+    <h4>Edge type</h4>
+    <div class="ll"><div class="lline" style="border-top:1.5px solid #4a5480"></div> Cites / References</div>
+    <div class="ll"><div class="lline" style="border-top:2px solid #6050a8;border-style:dashed"></div> Extends / Inherits</div>
+    <div class="ll"><div class="lline" style="border-top:1.5px solid #3a7a5a;border-style:dotted"></div> Similar / Adjacent</div>
+  </div>
+</aside>
+
+<footer id="stats">
+  <div class="sv" id="sn">0</div><div class="sl">Oli's papers</div>
+  <div class="sv" id="sa">0</div><div class="sl">Adjacent works</div>
+  <div class="sv" id="se">0</div><div class="sl">Edges</div>
+</footer>
+
+<div id="infobar">Scroll to zoom · Drag nodes · Hover to explore · Double-click to open paper</div>
+
+<!-- Command Palette (Cmd-K) -->
+<div id="cmdKOverlay">
+  <div id="cmdKPanel">
+    <div id="cmdKInputWrap">
+      <span id="cmdKIcon">⌘</span>
+      <input id="cmdKInput" type="text" placeholder="Search papers, run actions… (⇧⏎ → chat)" autocomplete="off" spellcheck="false" />
+      <kbd id="cmdKEsc">esc</kbd>
+    </div>
+    <div id="cmdKResults"></div>
+  </div>
+</div>
+
+<!-- Node Detail Panel -->
+<aside id="nodeDetail">
+  <div id="ndHeader">
+    <div id="ndMeta"></div>
+    <div id="ndTitle">—</div>
+    <button id="ndClose" onclick="closeNodeDetail()" title="Close" aria-label="Close node detail">✕</button>
+  </div>
+  <div id="ndBody">
+    <div class="nd-section" id="ndAbstractSection">
+      <div class="nd-section-label">Abstract</div>
+      <div class="nd-abstract" id="ndAbstract"></div>
+    </div>
+    <div class="nd-section" id="ndTagsSection">
+      <div class="nd-section-label">Keywords</div>
+      <div class="nd-tags" id="ndTags"></div>
+    </div>
+    <div class="nd-section" id="ndEdgesSection">
+      <div class="nd-section-label">Connections <span id="ndEdgeCount" style="color:#3a4868;font-weight:400"></span></div>
+      <div class="nd-edges" id="ndEdgeList"></div>
+    </div>
+    <div class="nd-section" id="ndRankingsSection">
+      <div class="nd-section-label">Rankings &amp; Metrics</div>
+      <div id="ndRankingsList" class="nd-metrics"></div>
+    </div>
+  </div>
+  <div id="ndFooter">
+    <a id="ndOpenBtn" class="nd-btn primary" href="#" target="_blank">↗ Open paper</a>
+    <button class="nd-btn secondary" onclick="focusNodeInGraph()">⌖ Focus in graph</button>
+    <button class="nd-btn secondary" onclick="synthesiseSelected()" title="AI synthesis of this cluster">✦ Synthesise</button>
+  </div>
+</aside>
+
+<!-- Rankings Panel (LEFT) -->
+<div id="rankingsPanel">
+  <div class="panel-header">
+    <span class="panel-header-title">📊 Rankings</span>
+    <div style="flex:1"></div>
+    <button class="panel-close" onclick="toggleRankings()" title="Close">✕</button>
+  </div>
+  <div id="rpSubLine">Centrality metrics · EQBSL trust propagation</div>
+  <div class="rp-tabs">
+    <button class="rp-tab active" data-metric="overall"  onclick="setRankTab('overall')">Overall</button>
+    <button class="rp-tab"        data-metric="eqbsl"    onclick="setRankTab('eqbsl')">EQBSL</button>
+    <button class="rp-tab"        data-metric="pagerank" onclick="setRankTab('pagerank')">PageRank</button>
+    <button class="rp-tab"        data-metric="degree"   onclick="setRankTab('degree')">Degree</button>
+    <button class="rp-tab"        data-metric="between"  onclick="setRankTab('between')">Betweenness</button>
+    <button class="rp-tab"        data-metric="close"    onclick="setRankTab('close')">Closeness</button>
+  </div>
+  <div id="rpPerspectiveBar"></div>
+  <div id="rpList"></div>
+</div>
+
+<!-- Chat Panel (RIGHT) -->
+<div id="chatPanel">
+  <div class="panel-header">
+    <span class="panel-header-title">💬 Chat</span>
+    <div style="flex:1"></div>
+    <button class="panel-close" onclick="toggleChat()" title="Close">✕</button>
+  </div>
+  <div id="chatSubHeader">
+    <div class="ch-mode-toggle">
+      <button class="ch-mode-btn active" data-mode="graph" onclick="window.setChatModeUI('graph')">⚡ Graph</button>
+      <button class="ch-mode-btn" data-mode="query" onclick="window.setChatModeUI('query')">💬 Query</button>
+    </div>
+    <button id="chatClear" onclick="clearChatActions()" title="Clear highlights">🧹</button>
+    <button id="sessionClear" onclick="clearSessionData()"
+            title="Clear session data" aria-label="Clear saved session data">🗑</button>
+  </div>
+  <div id="modelRow">
+    <label for="modelInput">Model</label>
+    <input id="modelInput" list="modelList" value="openrouter/hunter-alpha"
+           placeholder="e.g. google/gemini-2.0-flash-exp:free" />
+    <datalist id="modelList">
+      <option value="google/gemini-2.0-flash-exp:free">
+    </datalist>
+  </div>
+  <div id="chatMessages">
+    <div class="chat-msg assistant">
+      <div class="ch-narrative">Ask me anything about this graph. I can highlight patterns, find hidden connections, trace paths between papers, and add inferred edges.</div>
+    </div>
+  </div>
+  <div id="chatInputRow">
+    <textarea id="chatInput" placeholder="Explore the graph in natural language…"></textarea>
+    <button id="chatSend" onclick="sendChat()">↑</button>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
