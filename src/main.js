@@ -30,8 +30,8 @@ import { callGraphLLM }    from './ai/graph-llm.js';
 import { classifyWithLLM } from './ai/classify.js';
 import { batchAIEdges }    from './ai/edges.js';
 import { synthesiseSubgraph, synthesiseAllClusters } from './ai/synthesis.js';
-import { fetchMetaFromInput } from './sources/fetch.js';
-import { fetchAdjacentWork }  from './sources/semantic-scholar.js';
+import { fetchMetaFromInput, searchArxivByKeyword, searchZenodoByKeyword } from './sources/fetch.js';
+import { fetchAdjacentWork, searchS2 }  from './sources/semantic-scholar.js';
 
 // ── Expose d3 globally (loaded via CDN script tag) ─────────────────────────
 const d3 = window.d3;
@@ -771,6 +771,52 @@ function setAddStatus(msg, color) {
   el.textContent = msg;
 }
 
+function _isDuplicateMeta(meta) {
+  if (!meta) return true;
+  if (meta.doi && nodes.some(n => n.doi && n.doi === meta.doi)) return true;
+  const title = (meta.title || '').trim().toLowerCase();
+  if (!title) return false;
+  return nodes.some(n => (n.title || '').trim().toLowerCase() === title);
+}
+
+function _syncGraphAfterMutation() {
+  sim.nodes(nodes);
+  rerenderLinks(linkG, linkHitG, linkData, nmap,
+    (e, l) => { showLinkTip(linkTip, e, l, nmap); tip.classed('show', false); },
+    _moveLinkTipFn,
+    () => linkTip.classed('show', false)
+  );
+  sim.force('link').links(linkData);
+  sim.alpha(0.4).restart();
+  document.getElementById('sa').textContent = nodes.filter(n => !n.isOli).length;
+  document.getElementById('se').textContent = linkData.length;
+}
+
+function _ingestPaper(meta, cls) {
+  const uid  = 'dyn_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5);
+  const title = meta.title || 'Untitled';
+  const newNode = {
+    id: uid, cluster: cls.cluster || 'trust',
+    title,
+    short: title.slice(0, 38) + (title.length > 38 ? '...' : ''),
+    authors: meta.authors || ['Unknown'], year: meta.year || 2024,
+    abstract: (meta.abstract || '').slice(0, 400), tags: cls.tags || meta.tags || [],
+    url: meta.url || '', doi: meta.doi || '', r: 10, src: meta.src || 'external', isOli: false,
+    x: W / 2 + (Math.random() - 0.5) * 220, y: H / 2 + (Math.random() - 0.5) * 220,
+  };
+  nodes.push(newNode); nmap[uid] = newNode;
+
+  const newLinks = (cls.edges || []).filter(e => e.target && nmap[e.target])
+    .map(e => ({ source: uid, target: e.target, type: e.type || 'similar' }));
+
+  if (!newLinks.length) {
+    const fallback = { trust:'eqbsl', consciousness:'godelos', crypto:'bitcoll', collective:'plenum' }[cls.cluster] || 'eqbsl';
+    newLinks.push({ source: uid, target: fallback, type: 'similar' });
+  }
+  newLinks.forEach(l => linkData.push(l));
+  return newNode;
+}
+
 window.addPaperFromUrl = async function() {
   const raw = document.getElementById('addInput').value.trim();
   if (!raw) { setAddStatus('Please enter a DOI, arXiv ID, or URL.', '#f08060'); return; }
@@ -778,41 +824,124 @@ window.addPaperFromUrl = async function() {
   const { meta, error } = await fetchMetaFromInput(raw);
   if (!meta) { setAddStatus(error || 'Could not fetch metadata.', '#f08060'); return; }
 
-  if (nodes.some(n => n.doi && n.doi === meta.doi && meta.doi)) {
+  if (_isDuplicateMeta(meta)) {
     setAddStatus('This paper is already in the graph!', '#f0c040'); return;
   }
 
   setAddStatus(`Classifying "${meta.title.slice(0,40)}…"`, '#8ab4ff');
   const cls  = await classifyWithLLM(meta, OLI, CITED, ARXIV, nmap);
-  const uid  = 'dyn_' + Date.now().toString(36);
-  const newNode = {
-    id: uid, cluster: cls.cluster||'trust',
-    title: meta.title, short: meta.title.slice(0,38)+(meta.title.length>38?'...':''),
-    authors: meta.authors||['Unknown'], year: meta.year||2024,
-    abstract: (meta.abstract||'').slice(0,400), tags: cls.tags||[],
-    url: meta.url||'', doi: meta.doi||'', r:10, src: meta.src||'external', isOli: false,
-    x: W/2+(Math.random()-0.5)*200, y: H/2+(Math.random()-0.5)*200,
-  };
-  nodes.push(newNode); nmap[uid] = newNode;
-  const newLinks = (cls.edges||[]).filter(e=>e.target&&nmap[e.target])
-    .map(e => ({source:uid, target:e.target, type:e.type||'similar'}));
-  if (!newLinks.length) newLinks.push({source:uid, target:{trust:'eqbsl',consciousness:'godelos',crypto:'bitcoll',collective:'plenum'}[cls.cluster]||'eqbsl', type:'similar'});
-  newLinks.forEach(l => linkData.push(l));
-
-  sim.nodes(nodes);
-  rerenderLinks(linkG, linkHitG, linkData, nmap,
-    (e, l) => { showLinkTip(linkTip, e, l, nmap); tip.classed("show",false); },
-    _moveLinkTipFn,
-    () => linkTip.classed("show",false)
-  );
-  sim.force('link').links(linkData);
-  sim.alpha(0.4).restart();
-
-  document.getElementById('sa').textContent = nodes.filter(n=>!n.isOli).length;
-  document.getElementById('se').textContent = linkData.length;
+  _ingestPaper(meta, cls);
+  _syncGraphAfterMutation();
   setAddStatus(`✓ Added "${meta.title.slice(0,40)}" — ${cls.cluster}. ${cls.reason||''}`, '#5ecfa0');
   document.getElementById('addInput').value = '';
   saveSession(nodes, linkData, STATIC_EDGE_COUNT, tempLinks);
+};
+
+window.runResearchAgent = async function() {
+  if (!chatPanelOpen) openChatPanel();
+
+  const anchor = (selected && nmap[selected]) || nodes.find(n => n.isOli) || nodes[0];
+  if (!anchor) {
+    addMsg('error', '⚠ Research agent: no anchor node available.');
+    return;
+  }
+
+  const neighborIds = linkData
+    .flatMap(l => {
+      const s = l.source?.id || l.source;
+      const t = l.target?.id || l.target;
+      if (s === anchor.id) return [t];
+      if (t === anchor.id) return [s];
+      return [];
+    })
+    .filter(id => nmap[id])
+    .slice(0, 24);
+
+  const stanceTerms = Array.from(new Set([
+    ...(anchor.tags || []).slice(0, 4),
+    ...(neighborIds.flatMap(id => (nmap[id].tags || []).slice(0, 2))),
+    anchor.cluster,
+  ].map(s => String(s || '').trim().toLowerCase()).filter(Boolean))).slice(0, 8);
+
+  addMsg('assistant', `<div class="ch-narrative"><strong>Research stance</strong>: ${_esc(anchor.short || anchor.title || anchor.id)} · ${_esc(anchor.cluster)} · terms: ${_esc(stanceTerms.join(', '))}</div>`);
+  const thinking = addMsg('thinking', '⟳ Mining arXiv, Zenodo, and S2…');
+
+  try {
+    const qTerms = stanceTerms.slice(0, 4);
+    const mined = [];
+
+    for (const term of qTerms) {
+      const [ax, ze, s2] = await Promise.all([
+        searchArxivByKeyword(term, 6),
+        searchZenodoByKeyword(term, 6),
+        searchS2(`${term} ${anchor.cluster}`, 6),
+      ]);
+      mined.push(...ax, ...ze, ...s2.map(p => ({
+        title: p.title,
+        abstract: p.abstract,
+        authors: p.authors,
+        year: p.year,
+        url: p.url,
+        doi: p.doi,
+        src: p.src || 'Semantic Scholar',
+        tags: p.tags || [term],
+      })));
+    }
+
+    // Local graph-aware adjacency expansion from Semantic Scholar.
+    const adj = await fetchAdjacentWork([anchor], nmap, 8);
+    mined.push(...adj.map(x => ({
+      title: x.paper.title,
+      abstract: x.paper.abstract,
+      authors: x.paper.authors,
+      year: x.paper.year,
+      url: x.paper.url,
+      doi: x.paper.doi,
+      src: x.paper.src || 'Semantic Scholar',
+      tags: x.paper.tags || [],
+    })));
+
+    const byKey = new Map();
+    mined.forEach(m => {
+      const key = (m.doi && `doi:${m.doi.toLowerCase()}`) || `t:${(m.title || '').trim().toLowerCase()}`;
+      if (!key || byKey.has(key)) return;
+      byKey.set(key, m);
+    });
+
+    const candidates = Array.from(byKey.values())
+      .filter(m => !_isDuplicateMeta(m))
+      .map(m => {
+        const hay = `${m.title || ''} ${m.abstract || ''} ${(m.tags || []).join(' ')}`.toLowerCase();
+        const score = qTerms.reduce((s, t) => s + (hay.includes(t) ? 1 : 0), 0) + (m.src === 'arXiv' || m.src === 'Zenodo' ? 0.25 : 0);
+        return { meta: m, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+
+    if (!candidates.length) {
+      if (thinking?.isConnected) thinking.remove();
+      addMsg('assistant', '<div class="ch-narrative">Research agent found no novel candidates for this stance.</div>');
+      return;
+    }
+
+    let added = 0;
+    for (let i = 0; i < candidates.length; i++) {
+      const { meta } = candidates[i];
+      if (_isDuplicateMeta(meta)) continue;
+      thinking.innerHTML = `⟳ Classifying candidate ${i + 1}/${candidates.length}: ${_esc((meta.title || '').slice(0, 72))}…`;
+      const cls = await classifyWithLLM(meta, OLI, CITED, ARXIV, nmap);
+      _ingestPaper(meta, cls);
+      added++;
+    }
+
+    _syncGraphAfterMutation();
+    saveSession(nodes, linkData, STATIC_EDGE_COUNT, tempLinks);
+    if (thinking?.isConnected) thinking.remove();
+    addMsg('assistant', `<div class="ch-narrative">Research agent imported <strong>${added}</strong> papers from a <em>${_esc(anchor.cluster)}</em> stance.</div>`);
+  } catch (e) {
+    if (thinking?.isConnected) thinking.remove();
+    addMsg('error', `⚠ Research agent failed: ${_esc(e.message || 'unknown error')}`);
+  }
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -914,6 +1043,7 @@ const CMDK_ACTIONS = [
   { icon: '💬', label: 'Open Chat',          action: () => window.toggleChat(),    hint: '' },
   { icon: '📊', label: 'Open Rankings',      action: () => window.toggleRankings(), hint: '' },
   { icon: '＋', label: 'Add Paper',           action: () => window.toggleAddPanel(), hint: '' },
+  { icon: '🧭', label: 'Run Research Agent', action: () => window.runResearchAgent(), hint: '' },
   { icon: '🤖', label: 'Generate AI Edges',  action: () => window.batchAIEdges(),  hint: '' },
   { icon: '⬡',  label: 'Toggle Hulls',       action: () => window.toggleHulls(),   hint: '' },
   { icon: '⬡',  label: 'Toggle Spectral',    action: () => window.toggleSpectral(), hint: '' },
